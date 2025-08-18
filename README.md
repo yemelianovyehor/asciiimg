@@ -1,7 +1,5 @@
 # How to convert an image to ASCII
 
-    There is also an interactive version of README in this repo
-
 ## Imports and example image
 
 I will use matplotlib to read image and show progress, numpy to edit image like a 2D array and PIL to finish up and save the new image.
@@ -221,11 +219,11 @@ There are a couple of methods like differecne of Gaussian or Canny. With mention
 
 But there is a more convinient method - Sobel operator. 
 
-$G = \begin{bmatrix}
+$$G = \begin{bmatrix}
 -1 & 0 & 1 \\
 -2 & 0 & 2 \\
 -1 & 0 & 1
-\end{bmatrix}$
+\end{bmatrix}$$
 
 By applying this operator on the chunk of image we get the difference between left ad right side of the chunk -- the "edgeness" of it.
 
