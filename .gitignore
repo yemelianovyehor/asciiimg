@@ -1,0 +1,7 @@
+ascii_image.png
+example.mp4
+frames
+frames/*
+tst.py
+__pycache__
+.vscode
