@@ -14,16 +14,24 @@ def grayscale(image, gamma=1.4,
 
 def downscale(image, factor):
     new_size = image.shape[0]//factor, image.shape[1]//factor
-    new_image = np.zeros(new_size, dtype=np.float32)
-    for i in range(new_size[0]):
-        for j in range(new_size[1]):
-            new_image[i, j] = image[i * factor : (i + 1) * factor,
-                                    j * factor : (j + 1) * factor].mean()
-    return new_image * (len(ascii_chars)-1) // new_image.max()
+    new_image = np.empty_like(image)[0:new_size[0], 0:new_size[1]]
+    if image.ndim == 2:
+        for i in range(new_size[0]):
+            for j in range(new_size[1]):
+                new_image[i, j] = image[i * factor : (i + 1) * factor,
+                                        j * factor : (j + 1) * factor].mean()
+    elif image.ndim == 3:
+        for i in range(new_size[0]):
+            for j in range(new_size[1]):
+                mean_col = image[i * factor : (i + 1) * factor,
+                                 j * factor : (j + 1) * factor, :].mean(axis=(0,1))
+                new_image[i, j] = mean_col
+    return new_image
 
 def grayscale_to_ascii(image, ascii_chars=ascii_chars):
     ascii_image = np.empty(image.shape, dtype=str)  # Create empty array for ASCII characters
-
+    image = image * (len(ascii_chars)-1) // image.max()
+    
     for i in range(image.shape[0]):
         for j in range(image.shape[1]):
             pixel_value = image[i, j]
@@ -110,26 +118,35 @@ def generate_edges(degrees_array, cardinal_threshhold, edges = ("|","_","\\","/"
                     edges_array[i, j] = edges[1] # _
     return edges_array
 
+def overlay_edges(ascii_array, edges_array):
+    np.copyto(edges_array, ascii_array, where=(edges_array == " "))
+    return edges_array
 
-def convert_img(image, downscale_factor=8, gamma=1.4,
+
+def convert_img(input_file: str|np.ndarray, output_path="ascii_image.png",
+                 downscale_factor=8, gamma=1.4,
                  magnitude_threshhold=0.3, cardinal_threshhold=10,
                  font_path="DejaVuSansMono.ttf", font_size=12,
-                 text_color=255, bg_color=0, output_path="ascii_image.png", ascii_chars=ascii_chars):
+                 text_color=255, bg_color=0, ascii_chars=ascii_chars):
+    if isinstance(input_file, str):
+        image = imread(input_file)
+    elif isinstance(input_file, np.ndarray):
+        image = input_file
     image = grayscale(image, gamma)
     image = downscale(image, downscale_factor)
     edges = generate_edges(sobel(image, magnitude_threshhold), cardinal_threshhold)
     ascii_image = grayscale_to_ascii(image, ascii_chars)
 
-    np.copyto(edges, ascii_image, where=(edges == " "))
-    img = draw_ascii_image(edges, font_path, font_size, text_color, bg_color)
-    img.save(output_path)
+    img = overlay_edges(ascii_image, edges)
+    img = draw_ascii_image(img, font_path, font_size, text_color, bg_color)
+    if output_path is not None:
+        img.save(output_path)
     return img
     
 
 if __name__ == "__main__":
     # Example usage
-    img = convert_img("cat.jpg")
-    img.save("ascii_image.png")
+    img = convert_img("cat.jpg", "ascii_image.png")
     plt.imshow(img, cmap="gray")
     plt.axis("off")
     plt.show()

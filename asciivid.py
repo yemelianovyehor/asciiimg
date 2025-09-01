@@ -7,10 +7,7 @@ from asciiimg import convert_img
 
 in_filename = 'example.mp4'
 
-def convert_vid(input, output="example.mp4", framerate=25, downscale_factor=8, gamma=1.4,
-                 magnitude_threshhold=0.3, cardinal_threshhold=10,
-                 font_path="DejaVuSansMono.ttf", font_size=12,
-                 text_color=255, bg_color=0):
+def import_vid(in_filename):
     probe = ffmpeg.probe(input)
     video_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
     width = int(video_stream['width']) # type: ignore
@@ -22,13 +19,26 @@ def convert_vid(input, output="example.mp4", framerate=25, downscale_factor=8, g
         .output('pipe:', format='rawvideo', pix_fmt='rgb24')
         .run(capture_stdout=True)
     )
-    video = (
+    return (
         np
         .frombuffer(out, np.uint8)
         .reshape([-1, height, width, 3])
     )
+
+def convert_vid(input_file : str | np.ndarray, output="example.mp4", framerate=25, downscale_factor=8, gamma=1.4,
+                 magnitude_threshhold=0.3, cardinal_threshhold=10,
+                 font_path="DejaVuSansMono.ttf", font_size=12,
+                 text_color=255, bg_color=0):
+
+    if isinstance(input_file, str):
+        video = import_vid(input_file)
+    elif isinstance(input_file, np.ndarray):
+        video = input_file
+    else:
+        raise ValueError("Invalid input type")
+
     for frame in range(video.shape[0]):
-        convert_img(video[frame], 
+        convert_img(video[frame],
                     output_path=f"frames/frame_{frame:04d}.png",
                     downscale_factor=downscale_factor,
                     gamma=gamma,
