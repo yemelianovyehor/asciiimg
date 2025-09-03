@@ -1,11 +1,13 @@
+from dataclasses import dataclass
+from typing import Literal
 from matplotlib import pyplot as plt
 import numpy as np
 import asciiimg
 import asciivid
 
 
-
-class Image:
+@dataclass
+class ArrImage:
     def __init__(self, image):
         if isinstance(image, str):
             self.image = asciiimg.imread(image)
@@ -38,6 +40,12 @@ class Image:
         self.ascii_edges = asciiimg.generate_edges(self.edges, cardinal_threshhold, edges)
         return self
     
+    def mask(self, mask, fit: Literal["stretch", "tile", "resize"]="resize"):
+        if not isinstance(mask, ArrImage):
+            raise ValueError("Mask must be an instance of Image.")
+        self.image = asciiimg.apply_mask(self.image, mask.image, fit)
+        return self
+
     def draw(self, cmap=None):
         if cmap is None:
             plt.imshow(self.image)
@@ -54,15 +62,22 @@ class Image:
             plt.imsave(path, self.image, cmap=cmap) # type: ignore
         return self
 
+    def copy(self):
+        return ArrImage(self.image.copy())
 
 if __name__ == "__main__":
-    img = Image("cat.jpg")
-    img\
+    img = ArrImage("cat.jpg")
+    mask = img.copy()
+    mask\
         .grayscale()\
         .downscale()\
         .sobel()\
         .deg2edges()\
         .to_ascii()\
-        .draw()\
-        .save("ascii_cat.png", cmap="gray")
+        # .draw(cmap="gray")\
+        # .save("ascii_cat.png", cmap="gray")
+        # .draw()\
+    img\
+        .mask(mask, "tile")\
+        .save("masked.png")
         

@@ -1,3 +1,4 @@
+from typing import Literal
 from matplotlib.image import imread
 import matplotlib.pyplot as plt
 import numpy as np
@@ -59,6 +60,8 @@ def draw_ascii_image(char_matrix, font_path="DejaVuSansMono.ttf", font_size=12, 
     for y, row in enumerate(char_matrix):
         for x, char in enumerate(row):
             draw.text((x * char_width, y * char_height), str(char), font=font, fill=text_color)
+    
+    img = np.array(img)
 
     return img
 
@@ -140,8 +143,46 @@ def convert_img(input_file: str|np.ndarray, output_path="ascii_image.png",
     img = overlay_edges(ascii_image, edges)
     img = draw_ascii_image(img, font_path, font_size, text_color, bg_color)
     if output_path is not None:
+        img = Image.fromarray(img)
         img.save(output_path)
     return img
+
+def apply_mask(image:np.ndarray, mask:np.ndarray, fit: Literal["stretch", "tile", "resize"]="resize"):
+    if mask.shape[:1] != image.shape[:1]:   
+        if fit == "resize":
+            pil_image = Image.fromarray(image)
+            pil_mask = Image.fromarray(mask).convert("L").resize(pil_image.size)
+            mask = np.array(pil_mask)
+        elif fit == "tile":
+            reps = (image.shape[0] // mask.shape[0] + 1, image.shape[1] // mask.shape[1] + 1)
+            mask = np.tile(mask, reps)[:image.shape[0], :image.shape[1]]
+        elif fit == "stretch":
+            mask = np.array(Image.fromarray(mask).convert("L").resize((image.shape[1], image.shape[0])))
+        else:
+            raise ValueError("Invalid fit option. Choose from 'stretch', 'tile', or 'resize'.")
+    # masked_image = [image[:, :, 0]*mask, image[:, :, 1]*mask, image[:, :, 2]*mask]
+    #---
+    # plt.figure(figsize=(12, 5))
+    # plt.subplot(1, 2, 1)
+    # plt.imshow(image)
+    # plt.title("Original Image")
+    # plt.axis("off")
+    
+    # plt.subplot(1, 2, 2)
+    # plt.imshow(mask, cmap="gray")
+    # plt.title("Mask")
+    # plt.axis("off")
+    # plt.show()
+    #---
+    masked_image = np.zeros(shape=image.shape)
+    for i in range(image.shape[0]):
+        for j in range(image.shape[1]):
+            in_img = image[i,j]
+            in_mask = mask[i,j]
+            out_img = in_mask / 255.0 * in_img
+            masked_image[i,j] = out_img
+            # masked_image[i,j] = image[i,j] * mask[i,j] / 255
+    return masked_image.astype(np.uint8)
     
 
 if __name__ == "__main__":
